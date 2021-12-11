@@ -16,6 +16,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const usageMessage = `欢迎体验大牢宝 MVM 版本，支持以下命令：
+
+将 0.1 btc 冻结到大牢宝1小时/30分钟/60秒 
+lock 0.1 btc 1h/30m/60s
+
+解冻 ID 为 1 的金库
+unlock 1 				  
+`
+
 func NewCmd(cfg *config.Config) *cobra.Command {
 	client, err := mixin.NewFromKeystore(&cfg.Dapp)
 	if err != nil {
@@ -30,15 +39,21 @@ func NewCmd(cfg *config.Config) *cobra.Command {
 		b, _ := base64.StdEncoding.DecodeString(msg.Data)
 		args := strings.Fields(string(b))
 
-		root := &cobra.Command{Use: "blaze"}
+		root := &cobra.Command{
+			Use: "blaze",
+		}
+
+		root.SetUsageTemplate(usageMessage)
 		root.AddCommand(lock.NewCmd(cfg))
 		root.AddCommand(unlock.NewCmd(cfg))
 		root.SetArgs(args)
+
 		w := mm.Reply(client, msg.UserID)
 		root.SetOut(w)
 
 		if err := root.ExecuteContext(ctx); err != nil {
 			log.Printf("execute command %q failed: %v", string(b), err)
+			_ = root.Usage()
 		}
 
 		return w.Flush(ctx)
