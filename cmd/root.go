@@ -24,6 +24,7 @@ import (
 	"github.com/fox-one/hodl/cmd/blaze"
 	"github.com/fox-one/hodl/cmd/lock"
 	"github.com/fox-one/hodl/cmd/unlock"
+	"github.com/fox-one/hodl/cmd/worker"
 	"github.com/fox-one/hodl/config"
 	"github.com/fox-one/hodl/writer/cli"
 	homedir "github.com/mitchellh/go-homedir"
@@ -57,6 +58,7 @@ var rootCmd = &cobra.Command{
 		root.AddCommand(lock.NewCmd(cfg))
 		root.AddCommand(unlock.NewCmd(cfg))
 		root.AddCommand(blaze.NewCmd(cfg))
+		root.AddCommand(worker.NewCmd(cfg))
 		root.SetArgs(args)
 		root.SetOut(cli.QRCodeWriter(os.Stdout))
 		return root.ExecuteContext(ctx)

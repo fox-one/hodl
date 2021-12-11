@@ -1,9 +1,11 @@
 package core
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/MixinNetwork/mixin/common"
+	"github.com/shopspring/decimal"
 )
 
 func TestEvent_Encode(t *testing.T) {
@@ -16,4 +18,10 @@ func TestEvent_Encode(t *testing.T) {
 
 	d := common.NewDecoder(b)
 	t.Log(d.ReadInt())
+}
+
+func TestDecode(t *testing.T) {
+	i := big.NewInt(100)
+	d := decimal.NewFromBigInt(i, 2)
+	t.Log(d.String())
 }

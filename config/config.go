@@ -1,15 +1,18 @@
 package config
 
 import (
+	"github.com/fox-one/hodl/core"
 	"github.com/fox-one/mixin-sdk-go"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 )
 
-type Group struct {
-	Members   []string `json:"members,omitempty"`
-	Threshold uint8    `json:"threshold,omitempty"`
+type Config struct {
+	Group  core.Group     `json:"group,omitempty"`
+	System System         `json:"system,omitempty"`
+	Dapp   mixin.Keystore `json:"dapp,omitempty"`
+	MVM    MVM            `json:"mvm,omitempty"`
 }
 
 type System struct {
@@ -18,10 +21,9 @@ type System struct {
 	GasAmount  decimal.Decimal `json:"gas_amount,omitempty"`
 }
 
-type Config struct {
-	Group  Group          `json:"group,omitempty"`
-	System System         `json:"system,omitempty"`
-	Dapp   mixin.Keystore `json:"dapp,omitempty"`
+type MVM struct {
+	RPC             string `json:"rpc,omitempty"`
+	ContractAddress string `json:"contract_address,omitempty"`
 }
 
 func Load() (*Config, error) {

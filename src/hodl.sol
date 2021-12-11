@@ -64,22 +64,22 @@ contract Hodl {
     }
 
     function unlock(
+        uint64 nonce,
         uint64 id,
         address sender,
-        uint64 timestamp
+        uint64 timestamp,
+        bytes memory extra
     ) internal {
         require(vats[id].guy != address(0), "guy-not-set");
         require(vats[id].end < timestamp, "not-end");
 
-        bytes memory extra = uint64ToFixedBytes(id);
         bytes memory log = encodeMixinEvent(
-            id,
+            nonce,
             vats[id].asset,
             vats[id].amount,
-            extra,
+            uint128ToFixedBytes(PID).concat(extra),
             members[sender]
         );
-
         emit MixinTransaction(log);
         delete vats[id];
     }
@@ -92,7 +92,7 @@ contract Hodl {
         id = extra.toUint64(offset);
         offset += 8;
 
-         exp = extra.toUint64(offset);
+        exp = extra.toUint64(offset);
     }
 
     function work(
@@ -109,7 +109,7 @@ contract Hodl {
             id = nonce + 1;
             lock(id,asset,amount,sender,timestamp+exp);
         } else if (action == ActionUnlock) {
-            unlock(id,sender,timestamp);
+            unlock(nonce,id,sender,timestamp,extra);
         } else {
             return false;
         }

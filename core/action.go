@@ -22,3 +22,28 @@ func (e *Event) Encode() []byte {
 	enc.WriteUint64(e.Exp)
 	return enc.Bytes()
 }
+
+func DecodeEvent(b []byte) (*Event, error) {
+	var (
+		e   Event
+		err error
+	)
+
+	dec := common.NewDecoder(b)
+	e.Action, err = dec.ReadInt()
+	if err != nil {
+		return nil, err
+	}
+
+	e.VaultID, err = dec.ReadUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	e.Exp, err = dec.ReadUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	return &e, nil
+}
