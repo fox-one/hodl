@@ -26,6 +26,9 @@ contract Hodl {
         0x257ad901f02f8a442ccf4f1b1d0d7d3a8e8fe791102706e575d36de1c2a4a40f // y.x
     ];
 
+    uint16 public constant ActionLock = 1;
+    uint16 public constant ActionUnlock = 2;
+
     uint128 public PID = 0xd402f2c61ba04d82a75c5674fae1acca;
     uint64 public NONCE = 0;
     mapping(uint128 => uint256) public custodian;
@@ -36,11 +39,9 @@ contract Hodl {
         uint256 amount; // lock amount
         address guy; // the owner
         uint64 end; // vat expiry time [unix epoch time]
-        uint64 nonce;
     }
 
-    mapping(uint256 => vat) public vats;
-    uint256 tick = 0;
+    mapping(uint64 => vat) public vats;
 
     // --- Init ---
     constructor(uint128 pid_) {
@@ -48,25 +49,22 @@ contract Hodl {
     }
 
     function lock(
+        uint64 id,
         uint128 asset,
         uint256 amount,
         address guy,
-        uint64 end,
-        uint64 nonce
-    ) internal returns (uint256 id) {
+        uint64 end
+    ) internal {
         require(guy != address(0), "guy-not-set");
-        require(tick < type(uint256).max, "overflow");
 
-        id = ++tick;
         vats[id].asset = asset;
         vats[id].amount = amount;
         vats[id].guy = guy;
         vats[id].end = end;
-        vats[id].nonce = nonce;
     }
 
-    function redeem(
-        uint256 id,
+    function unlock(
+        uint64 id,
         address sender,
         uint64 timestamp
     ) internal {
@@ -74,7 +72,7 @@ contract Hodl {
 
         (bytes memory extra, ) = uint256ToVarBytes(id);
         bytes memory log = encodeMixinEvent(
-            vats[id].nonce,
+            id,
             vats[id].asset,
             vats[id].amount,
             extra,
@@ -85,6 +83,17 @@ contract Hodl {
         delete vats[id];
     }
 
+    function decodeExtra(bytes memory extra) internal view returns (uint16 action,uint64 id,uint64 exp) {
+        uint256 offset = 0;
+        action = extra.toUint16(offset);
+        offset += 2;
+
+        id = extra.toUint64(offset);
+        offset += 8;
+
+         exp = extra.toUint64(offset);
+    }
+
     function work(
         address sender,
         uint64 nonce,
@@ -92,20 +101,22 @@ contract Hodl {
         uint256 amount,
         uint64 timestamp,
         bytes memory extra
-    ) internal {
-        uint256 offset = 0;
-        uint256 id = extra.toUint256(offset);
-        offset = offset + 32;
-        if (id == 0) {
-            uint64 exp = extra.toUint64(offset);
-            lock(asset, amount, sender, timestamp + exp, nonce);
+    ) internal returns (bool) {
+        (uint16 action,uint64 id,uint64 exp) = decodeExtra(extra);
+
+        if (action == ActionLock) {
+            lock(id,asset,amount,sender,timestamp+exp);
+        } else if (action == ActionUnlock) {
+            unlock(id,sender,timestamp);
         } else {
-            redeem(id, sender, timestamp);
+            return false;
         }
+
+        return true;
     }
 
     // process || nonce || asset || amount || extra || timestamp || members || threshold || sig
-    function mixin(bytes calldata raw) public {
+    function mixin(bytes calldata raw) public returns (bool) {
         require(raw.length >= 141, "event data too small");
 
         uint256 size = 0;
@@ -161,7 +172,7 @@ contract Hodl {
             extra
         );
 
-        work(
+        return work(
             mixinSenderToAddress(sender),
             nonce,
             asset,
