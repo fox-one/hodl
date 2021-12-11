@@ -1,15 +1,32 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity >=0.8.4 <0.9.0;
+pragma solidity >=0.8.0 <0.9.0;
 
 import {BytesLib} from "./bytes.sol";
+import {BLS} from "./bls.sol";
 
 contract Hodl {
+    using BLS for uint256[2];
+    using BLS for bytes;
     using BytesLib for bytes;
 
     event MixinTransaction(bytes);
-    event MixinEvent(bytes);
+    event MixinEvent(
+        address indexed sender,
+        uint256 nonce,
+        uint128 asset,
+        uint256 amount,
+        uint64 timestamp,
+        bytes extra
+    );
 
-    uint128 public constant PID = 0xd402f2c61ba04d82a75c5674fae1acca;
+    uint256[4] public GROUPS = [
+        0x2f741961cea2e88cfa2680eeaac040d41f41f3fedb01e38c06f4c6058fd7e425, // x.y
+        0x007d68aef83f9690b04f463e13eadd9b18f4869041f1b67e7f1a30c9d1d2c42c, // x.x
+        0x2a32fa1736807486256ad8dc6a8740dfb91917cf8d15848133819275be92b673, // y.y
+        0x257ad901f02f8a442ccf4f1b1d0d7d3a8e8fe791102706e575d36de1c2a4a40f // y.x
+    ];
+
+    uint128 public PID = 0xd402f2c61ba04d82a75c5674fae1acca;
     uint64 public NONCE = 0;
     mapping(uint128 => uint256) public custodian;
     mapping(address => bytes) public members;
@@ -24,6 +41,11 @@ contract Hodl {
 
     mapping(uint256 => vat) public vats;
     uint256 tick = 0;
+
+    // --- Init ---
+    constructor(uint128 pid_) {
+        PID = pid_;
+    }
 
     function lock(
         uint128 asset,
@@ -48,7 +70,6 @@ contract Hodl {
         address sender,
         uint64 timestamp
     ) internal {
-        require(vats[id].guy == sender, "not-authorized");
         require(vats[id].end < timestamp, "not-end");
 
         (bytes memory extra, ) = uint256ToVarBytes(id);
@@ -59,9 +80,9 @@ contract Hodl {
             extra,
             members[sender]
         );
-        emit MixinTransaction(log);
 
-        delete (vats[id]);
+        emit MixinTransaction(log);
+        delete vats[id];
     }
 
     function work(
@@ -123,14 +144,22 @@ contract Hodl {
         offset = offset + size;
 
         offset = offset + 2;
-        bytes memory sig = raw.slice(offset, 64);
+        require(verifySignature(raw, offset), "invalid signature");
+
         offset = offset + 64;
         require(raw.length == offset, "malformed event encoding");
-        // TODO signature verification
 
-        emit MixinEvent(raw);
         custodian[asset] = custodian[asset] + amount;
         members[mixinSenderToAddress(sender)] = sender;
+
+        emit MixinEvent(
+            mixinSenderToAddress(sender),
+            nonce,
+            asset,
+            amount,
+            timestamp,
+            extra
+        );
 
         work(
             mixinSenderToAddress(sender),
@@ -165,6 +194,22 @@ contract Hodl {
         raw = raw.concat(receiver);
         raw = raw.concat(new bytes(2));
         return raw;
+    }
+
+    function verifySignature(bytes memory raw, uint256 offset)
+        internal
+        view
+        returns (bool)
+    {
+        uint256[2] memory sig = [
+            raw.toUint256(offset),
+            raw.toUint256(offset + 32)
+        ];
+        uint256[2] memory message = raw
+            .slice(0, offset - 2)
+            .concat(new bytes(2))
+            .hashToPoint();
+        return sig.verifySingle(GROUPS, message);
     }
 
     function mixinSenderToAddress(bytes memory sender)
