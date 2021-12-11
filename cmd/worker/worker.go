@@ -27,7 +27,7 @@ func NewCmd(cfg *config.Config) *cobra.Command {
 		Use: "worker",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			workers := []worker.Worker{
-				events.New(client, conn, cfg.MVM.ContractAddress),
+				events.New(client, conn, cfg.System.ProcessID, cfg.MVM.ContractAddress),
 			}
 
 			var g errgroup.Group

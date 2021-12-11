@@ -23,19 +23,21 @@ type Events struct {
 	hodl   *api.Hodl
 	groups map[string]*core.Group
 
-	offset uint64
+	processID string
+	offset    uint64
 }
 
-func New(client *mixin.Client, conn *ethclient.Client, address string) *Events {
+func New(client *mixin.Client, conn *ethclient.Client, processID, address string) *Events {
 	hodl, err := api.NewHodl(common.HexToAddress(address), conn)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	return &Events{
-		client: client,
-		hodl:   hodl,
-		groups: make(map[string]*core.Group),
+		client:    client,
+		hodl:      hodl,
+		processID: processID,
+		groups:    make(map[string]*core.Group),
 	}
 }
 
@@ -141,7 +143,7 @@ func (w *Events) handleMixinEvent(ctx context.Context, e *api.HodlMixinEvent) er
 	}
 
 	conversationID := mixin.UniqueConversationID(w.client.ClientID, userID)
-	messageID := uuid.NewV5(uuid.FromStringOrNil(conversationID), e.Nonce.String()).String()
+	messageID := uuid.NewV5(uuid.FromStringOrNil(w.processID), e.Nonce.String()).String()
 	log.Println("send message", messageID, userID, msg)
 	if err := w.client.SendMessage(ctx, &mixin.MessageRequest{
 		ConversationID: conversationID,

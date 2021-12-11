@@ -70,7 +70,7 @@ contract Hodl {
         uint64 timestamp,
         bytes memory extra
     ) internal {
-        require(vats[id].guy != address(0), "guy-not-set");
+        require(vats[id].guy == sender, "not-owner");
         require(vats[id].end < timestamp, "not-end");
 
         bytes memory log = encodeMixinEvent(
@@ -78,7 +78,7 @@ contract Hodl {
             vats[id].asset,
             vats[id].amount,
             uint128ToFixedBytes(PID).concat(extra),
-            members[sender]
+            members[vats[id].guy]
         );
         emit MixinTransaction(log);
         delete vats[id];
@@ -163,10 +163,12 @@ contract Hodl {
         require(raw.length == offset, "malformed event encoding");
 
         custodian[asset] = custodian[asset] + amount;
-        members[mixinSenderToAddress(sender)] = sender;
+
+        address addr = mixinSenderToAddress(sender);
+        members[addr] = sender;
 
         emit MixinEvent(
-            mixinSenderToAddress(sender),
+            addr,
             nonce,
             asset,
             amount,
@@ -175,7 +177,7 @@ contract Hodl {
         );
 
         return work(
-            mixinSenderToAddress(sender),
+            addr,
             nonce,
             asset,
             amount,
