@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"sort"
 	"sync"
 
 	"github.com/fox-one/hodl/core"
@@ -45,5 +46,8 @@ func (s *vaultStore) List(userID string) ([]*core.Vault, error) {
 		}
 	}
 
+	sort.Slice(vats, func(i, j int) bool {
+		return vats[i].ID < vats[j].ID
+	})
 	return vats, nil
 }

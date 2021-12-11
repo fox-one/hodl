@@ -65,9 +65,8 @@ func NewCmd(cfg *config.Config) *cobra.Command {
 			}
 
 			event := core.Event{
-				Action:  core.ActionLock,
-				VaultID: 0,
-				Exp:     uint64(exp),
+				Action: core.ActionLock,
+				Exp:    uint64(exp),
 			}
 
 			code, err := ivk.Payment(ctx, asset.AssetID, amount, event.Encode())

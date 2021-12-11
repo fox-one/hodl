@@ -128,7 +128,7 @@ contract Hodl {
         offset = offset + 16;
 
         uint64 nonce = raw.toUint64(offset);
-        require(nonce == NONCE, "invalid nonce");
+        require(nonce >= NONCE, "invalid nonce");
         NONCE = NONCE + 1;
         offset = offset + 8;
 
