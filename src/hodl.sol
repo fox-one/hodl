@@ -68,9 +68,10 @@ contract Hodl {
         address sender,
         uint64 timestamp
     ) internal {
+        require(vats[id].guy != address(0), "guy-not-set");
         require(vats[id].end < timestamp, "not-end");
 
-        (bytes memory extra, ) = uint256ToVarBytes(id);
+        bytes memory extra = uint64ToFixedBytes(id);
         bytes memory log = encodeMixinEvent(
             id,
             vats[id].asset,
@@ -105,6 +106,7 @@ contract Hodl {
         (uint16 action,uint64 id,uint64 exp) = decodeExtra(extra);
 
         if (action == ActionLock) {
+            id = nonce + 1;
             lock(id,asset,amount,sender,timestamp+exp);
         } else if (action == ActionUnlock) {
             unlock(id,sender,timestamp);
