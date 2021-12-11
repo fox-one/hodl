@@ -21,7 +21,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/fox-one/hodl/cmd/blaze"
 	"github.com/fox-one/hodl/cmd/lock"
 	"github.com/fox-one/hodl/cmd/unlock"
 	"github.com/fox-one/hodl/cmd/worker"
@@ -57,7 +56,6 @@ var rootCmd = &cobra.Command{
 
 		root.AddCommand(lock.NewCmd(cfg))
 		root.AddCommand(unlock.NewCmd(cfg))
-		root.AddCommand(blaze.NewCmd(cfg))
 		root.AddCommand(worker.NewCmd(cfg))
 		root.SetArgs(args)
 		root.SetOut(cli.QRCodeWriter(os.Stdout))

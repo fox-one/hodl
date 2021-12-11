@@ -67,7 +67,7 @@ func NewCmd(cfg *config.Config) *cobra.Command {
 			event := core.Event{
 				Action:  core.ActionLock,
 				VaultID: 0,
-				Exp:     uint64(exp.Seconds()),
+				Exp:     uint64(exp),
 			}
 
 			code, err := ivk.Payment(ctx, asset.AssetID, amount, event.Encode())
@@ -76,7 +76,7 @@ func NewCmd(cfg *config.Config) *cobra.Command {
 			}
 
 			action := mixin.URL.Codes(code)
-			label := fmt.Sprintf("Lock %s %s", amount, symbol)
+			label := fmt.Sprintf("lock %s %s", amount, symbol)
 			cmd.Println(writer.WithLabel(action, label))
 			return nil
 		},

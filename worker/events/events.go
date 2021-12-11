@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -18,17 +19,26 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type Events struct {
-	client *mixin.Client
-	hodl   *api.Hodl
-	groups map[string]*core.Group
+type Config struct {
+	ProcessID       string `validate:uuid,required`
+	ContractAddress string `validate:"required"`
+}
 
+type Events struct {
+	client    *mixin.Client
+	hodl      *api.Hodl
+	groups    map[string]*core.Group
+	vats      core.VaultStore
 	processID string
 	offset    uint64
 }
 
-func New(client *mixin.Client, conn *ethclient.Client, processID, address string) *Events {
-	hodl, err := api.NewHodl(common.HexToAddress(address), conn)
+func New(client *mixin.Client, conn *ethclient.Client, vats core.VaultStore, cfg Config) *Events {
+	if _, err := govalidator.ValidateStruct(cfg); err != nil {
+		log.Fatal(err)
+	}
+
+	hodl, err := api.NewHodl(common.HexToAddress(cfg.ContractAddress), conn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -36,7 +46,8 @@ func New(client *mixin.Client, conn *ethclient.Client, processID, address string
 	return &Events{
 		client:    client,
 		hodl:      hodl,
-		processID: processID,
+		vats:      vats,
+		processID: cfg.ProcessID,
 		groups:    make(map[string]*core.Group),
 	}
 }
@@ -136,8 +147,25 @@ func (w *Events) handleMixinEvent(ctx context.Context, e *api.HodlMixinEvent) er
 	case core.ActionLock:
 		id := nonce + 1
 		msg = fmt.Sprintf("Vault #%d locked with %s %s", id, amount, asset.Symbol)
+
+		if err := w.vats.Save(&core.Vault{
+			ID:     id,
+			Symbol: asset.Symbol,
+			Amount: amount,
+			UserID: userID,
+			End:    time.Unix(0, int64(body.Exp+e.Timestamp)),
+		}); err != nil {
+			log.Println("vats.Save", err)
+			return err
+		}
+
 	case core.ActionUnlock:
 		msg = fmt.Sprintf("Vault #%d unlocked", body.VaultID)
+		if _, err := w.vats.Delete(body.VaultID); err != nil {
+			log.Println("vats.Delete", err)
+			return err
+		}
+
 	default:
 		return nil
 	}

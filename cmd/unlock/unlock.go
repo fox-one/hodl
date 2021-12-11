@@ -47,7 +47,7 @@ func NewCmd(cfg *config.Config) *cobra.Command {
 			}
 
 			action := mixin.URL.Codes(code)
-			label := fmt.Sprintf("Unlock %d", id)
+			label := fmt.Sprintf("unlock #%d", id)
 			cmd.Println(writer.WithLabel(action, label))
 			return nil
 		},

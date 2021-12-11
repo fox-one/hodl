@@ -12,7 +12,8 @@ const (
 type Event struct {
 	Action  int
 	VaultID uint64
-	Exp     uint64
+	// Exp in nano seconds
+	Exp uint64
 }
 
 func (e *Event) Encode() []byte {

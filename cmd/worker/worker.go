@@ -5,7 +5,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/fox-one/hodl/config"
+	"github.com/fox-one/hodl/store/vault"
 	"github.com/fox-one/hodl/worker"
+	"github.com/fox-one/hodl/worker/blaze"
 	"github.com/fox-one/hodl/worker/events"
 	"github.com/fox-one/mixin-sdk-go"
 	"github.com/spf13/cobra"
@@ -23,11 +25,17 @@ func NewCmd(cfg *config.Config) *cobra.Command {
 		panic(err)
 	}
 
+	vats := vault.New()
+
 	cmd := &cobra.Command{
 		Use: "worker",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			workers := []worker.Worker{
-				events.New(client, conn, cfg.System.ProcessID, cfg.MVM.ContractAddress),
+				events.New(client, conn, vats, events.Config{
+					ProcessID:       cfg.System.ProcessID,
+					ContractAddress: cfg.MVM.ContractAddress,
+				}),
+				blaze.New(client, vats, cfg),
 			}
 
 			var g errgroup.Group
